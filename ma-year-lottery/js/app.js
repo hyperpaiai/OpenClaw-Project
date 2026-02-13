@@ -568,15 +568,16 @@ function startGuestLottery() {
         return;
     }
     
-    const participants = getParticipants().filter(p => !p.isWinner);
+    // 嘉宾赞助抽奖：所有人都可以参与，不排除已中奖人员
+    const participants = getParticipants();
     
     if (participants.length === 0) {
-        alert('没有可抽奖的参与者！');
+        alert('没有可抽奖的参与者！请先添加人员。');
         return;
     }
     
     if (count > participants.length) {
-        alert(`参与者不足！当前只有 ${participants.length} 人未中奖。`);
+        alert(`参与者不足！当前只有 ${participants.length} 人。`);
         return;
     }
     
@@ -589,15 +590,7 @@ function startGuestLottery() {
         winners.push(tempParticipants.splice(index, 1)[0]);
     }
     
-    // 标记为已中奖
-    const allParticipants = getParticipants();
-    winners.forEach(w => {
-        const p = allParticipants.find(x => x.id === w.id);
-        if (p) p.isWinner = true;
-    });
-    saveParticipants(allParticipants);
-    
-    // 保存记录
+    // 保存记录（不标记为已中奖，嘉宾抽奖独立于主抽奖）
     const history = getGuestHistory();
     history.push({
         amount,
@@ -619,6 +612,46 @@ function startGuestLottery() {
     document.getElementById('guest-count').value = '1';
     
     renderGuestHistory();
+}
+
+// 重置抽奖（清除中奖数据，保留人员信息）
+function resetLottery() {
+    if (!confirm('确定要重置抽奖吗？\n这将清除所有中奖记录，但保留参与人员信息。')) {
+        return;
+    }
+    
+    // 清除中奖结果
+    localStorage.removeItem(StorageKeys.RESULTS);
+    
+    // 重置当前奖项阶段
+    saveCurrentStage(3);
+    
+    // 清除嘉宾抽奖历史
+    localStorage.removeItem(StorageKeys.GUEST_HISTORY);
+    
+    // 重置所有人员的 isWinner 状态
+    const participants = getParticipants();
+    participants.forEach(p => {
+        p.isWinner = false;
+    });
+    saveParticipants(participants);
+    
+    alert('🔄 抽奖已重置！\n所有中奖记录已清除，可以重新开始抽奖。');
+    
+    // 如果在抽奖页面，刷新显示
+    if (document.getElementById('lottery-page').classList.contains('active')) {
+        initLotteryPage();
+    }
+    
+    // 如果在结果页面，刷新显示
+    if (document.getElementById('results-page').classList.contains('active')) {
+        renderResults();
+    }
+    
+    // 如果在嘉宾页面，刷新显示
+    if (document.getElementById('guest-lottery-page').classList.contains('active')) {
+        renderGuestHistory();
+    }
 }
 
 // ==================== 初始化 ====================
@@ -650,3 +683,4 @@ window.stopLottery = stopLottery;
 window.closeModal = closeModal;
 window.showBigScreen = showBigScreen;
 window.startGuestLottery = startGuestLottery;
+window.resetLottery = resetLottery;
